@@ -10,11 +10,14 @@
   :root{
     --bg:#0A0F1E; --bg2:#0F1730; --panel:rgba(255,255,255,.05); --line:rgba(255,255,255,.10);
     --txt:#EAF0FF; --dim:#96A3C4; --cyan:#22D3EE; --violet:#8B5CF6; --pink:#EC4899; --ok:#34D399;
+    --soft:rgba(255,255,255,.04);
     --shadow:0 18px 50px rgba(0,0,0,.45);
   }
   html[data-theme="light"]{
     --bg:#F2F5FC; --bg2:#E7ECF9; --panel:rgba(255,255,255,.85); --line:rgba(16,24,48,.10);
     --txt:#0F1730; --dim:#5A6787; --shadow:0 18px 40px rgba(16,24,48,.14);
+    /* на светлом фоне голубой #22D3EE почти не читается — берём тёмный бирюзовый */
+    --cyan:#0E7490; --soft:rgba(16,24,48,.04);
   }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -56,6 +59,9 @@
     background:var(--panel); border:1px solid var(--line); box-shadow:var(--shadow);
     word-break:break-word; white-space:pre-wrap; max-width:min(100%,760px)}
   .msg.ai .bub{border-top-left-radius:6px}
+  /* Ответ ИИ собирается из HTML (заголовки, списки, блоки кода), поэтому
+     переносы строк в нём рисует разметка, а не пробелы. */
+  .bub.rich{white-space:normal}
   .msg.me .bub{border-top-right-radius:6px; background:linear-gradient(135deg,var(--violet),var(--cyan)); color:#06111F; font-weight:500}
   .src{display:block; margin-top:8px; font-size:12px; color:var(--dim)}
   .dots{display:inline-flex; gap:6px; padding:3px 0}
@@ -85,6 +91,10 @@
     background:linear-gradient(135deg,var(--violet),var(--cyan)); color:#06111F; transition:.15s}
   .send:hover{transform:translateY(-2px)}
   .send.busy{opacity:.55; cursor:progress}
+  .pic{width:50px; height:50px; border-radius:15px; flex:none; font-size:21px; line-height:1;
+    display:grid; place-items:center; background:var(--panel); color:var(--txt);
+    border:1px solid var(--line); transition:.15s}
+  .pic:hover{border-color:var(--cyan); transform:translateY(-2px)}
   #toast{
     position:fixed; left:50%; bottom:96px; transform:translateX(-50%); z-index:9;
     background:#0F1730; color:#EAF0FF; border:1px solid var(--line); border-radius:13px;
@@ -109,6 +119,55 @@
   .btn.main{background:linear-gradient(135deg,var(--violet),var(--cyan)); color:#06111F; font-weight:700; border:0}
   .note{margin-top:14px; font-size:12.5px; color:var(--dim); line-height:1.55}
   .ok{color:var(--ok)}
+  /* счётчик «сколько людей сейчас на сайте» */
+  .onl{display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--dim);
+       padding:8px 11px; border:1px solid var(--line); border-radius:12px; background:var(--panel); white-space:nowrap}
+  .onl b{color:var(--ok); font-weight:800; font-size:14px}
+  /* кнопка с числом новых ответов */
+  .icbWrap{position:relative; display:inline-flex}
+  .badge{position:absolute; top:-5px; right:-5px; min-width:17px; height:17px; padding:0 4px;
+         border-radius:9px; background:var(--pink); color:#fff; font-size:11px; font-weight:800;
+         line-height:17px; text-align:center; display:none}
+  .badge.on{display:block}
+  /* ответы автора */
+  .rep{border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin:10px 0; background:var(--panel)}
+  .rep .when{font-size:11.5px; color:var(--dim); margin-bottom:7px}
+  .rep .body{font-size:14.5px; line-height:1.55; white-space:pre-wrap}
+  .rep .mine{font-size:12.5px; color:var(--dim); margin-top:9px; border-top:1px dashed var(--line); padding-top:8px; white-space:pre-wrap}
+  .code{font-family:ui-monospace,Consolas,monospace; font-weight:700; color:var(--cyan); letter-spacing:.5px}
+
+  /* ---------- код, файлы и картинки в ответе ---------- */
+  .bub h3{font-size:15.5px; margin:12px 0 6px}
+  .bub h4{font-size:14.5px; margin:10px 0 5px}
+  .bub p{margin:7px 0}
+  .bub ul,.bub ol{margin:7px 0 7px 20px}
+  .bub li{margin:3px 0}
+  .bub code.inl{font-family:ui-monospace,Consolas,monospace; font-size:13px;
+    background:var(--soft); border:1px solid var(--line); border-radius:6px; padding:1px 5px}
+  .bub a{color:var(--cyan)}
+  .tblwrap{overflow:auto; margin:11px 0}
+  .tblwrap table{border-collapse:collapse; font-size:13.5px; min-width:100%}
+  .tblwrap th,.tblwrap td{border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top}
+  .tblwrap th{background:var(--soft); font-weight:700}
+  .codebox{margin:11px 0; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--soft)}
+  .codebox .bar{display:flex; align-items:center; gap:8px; padding:7px 10px;
+    background:var(--panel); border-bottom:1px solid var(--line)}
+  .codebox .lang{font-size:11.5px; color:var(--dim); letter-spacing:.4px; text-transform:uppercase}
+  .codebox .grow2{flex:1}
+  .codebox button,.picbox button{font:inherit; font-size:12px; cursor:pointer; border:1px solid var(--line);
+    background:var(--panel); color:var(--txt); border-radius:8px; padding:4px 9px}
+  .codebox button:hover,.picbox button:hover{border-color:var(--cyan)}
+  .codebox pre{margin:0; padding:11px 12px; overflow:auto; max-height:340px}
+  .codebox code{font-family:ui-monospace,Consolas,monospace; font-size:12.8px; line-height:1.5; white-space:pre}
+  .picbox{margin:11px 0}
+  .picbox img{width:100%; max-width:420px; border-radius:14px; border:1px solid var(--line); display:block}
+  .picbox .bar{display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap}
+  .picbox .hint{font-size:12px; color:var(--dim)}
+  .acts{display:flex; gap:7px; margin-top:9px; flex-wrap:wrap}
+  .acts button{font:inherit; font-size:12px; cursor:pointer; border:1px solid var(--line);
+    background:transparent; color:var(--dim); border-radius:8px; padding:4px 9px}
+  .acts button:hover{color:var(--txt); border-color:var(--cyan)}
+  .icb.on2{border-color:var(--cyan); color:var(--cyan)}
   footer{position:relative; z-index:2; text-align:center; font-size:12px; color:var(--dim); padding:0 16px 14px}
 </style>
 </head>
@@ -121,6 +180,11 @@
     <div class="sub" id="modeTxt">Готов отвечать</div>
   </div>
   <div class="grow"></div>
+  <div class="onl" id="onl" title="Сколько людей сейчас на сайте"><b>—</b><span>онлайн</span></div>
+  <span class="icbWrap">
+    <button class="icb" id="repBtn" title="Ответы автора">💬</button>
+    <i class="badge" id="repBadge">0</i>
+  </span>
   <button class="icb" id="themeBtn" title="Сменить тему">🌙</button>
   <button class="icb" id="writeBtn" title="Написать автору">✉️</button>
   <button class="icb" id="cfgBtn" title="Настройки">⚙️</button>
@@ -132,6 +196,7 @@
 
 <div class="composer">
   <div class="cin">
+    <button class="pic" id="picBtn" title="Нарисовать картинку по описанию">🖼</button>
     <textarea id="ask" rows="1" placeholder="Спроси что угодно… (Enter — отправить, Shift+Enter — новая строка)"></textarea>
     <button class="send" id="send" title="Отправить">
       <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 16-8-6 16-2.5-6.5L4 12z"/></svg>
@@ -154,20 +219,32 @@
     <div id="keyFields" style="display:none">
       <label for="prov">Сервис</label>
       <select id="prov">
-        <option value="groq">Groq (gsk_…)</option>
-        <option value="openrouter">OpenRouter (sk-or-…)</option>
+        <option value="github">GitHub Models — там есть DeepSeek (github_pat_…)</option>
+        <option value="openrouter">OpenRouter — бесплатный DeepSeek (sk-or-…)</option>
+        <option value="groq">Groq — очень быстрый (gsk_…)</option>
         <option value="gemini">Google Gemini (AIza…)</option>
       </select>
       <label for="key">Ключ</label>
       <input id="key" type="password" placeholder="вставь ключ" autocomplete="off">
-      <label for="mdl">Модель (можно не заполнять)</label>
-      <input id="mdl" type="text" placeholder="модель">
+      <label for="mdl">Модель (можно не заполнять — возьму лучшую по умолчанию)</label>
+      <input id="mdl" type="text" placeholder="например deepseek/DeepSeek-V3-0324">
     </div>
     <div class="row">
       <button class="btn main" id="saveCfg">Сохранить</button>
+      <button class="btn" id="testCfg">Проверить связь</button>
       <button class="btn" id="closeCfg">Закрыть</button>
     </div>
-    <div class="note">Ключ хранится только в этом браузере и никуда не отправляется, кроме самого сервиса.</div>
+    <div class="note" id="cfgNote">Ключ хранится только в этом браузере и никуда не отправляется, кроме самого сервиса.</div>
+    <div class="note" style="border-top:1px dashed var(--line); padding-top:12px">
+      <b>Что умею:</b> отвечать на любые вопросы (в том числе сложные), писать код отдельным
+      файлом, рисовать картинки, отдавать ответ файлом.<br>
+      <b>Чего не могу:</b> этот сайт — обычная страница в браузере. Браузер запрещает странице
+      запускать программы и управлять компьютером — это не наша недоработка, а правило
+      безопасности любого браузера. Управлять компьютером может только установленная
+      программа (например «Помощник» на компьютере автора).<br>
+      <b>Нужно действие на компьютере?</b> Нажми ✉️ и напиши, что сделать, — автор сделает
+      и ответит в кнопке 💬.
+    </div>
   </div>
 </div>
 
@@ -175,7 +252,7 @@
 <div class="sheet" id="writeSheet">
   <div class="panel">
     <h2>✉️ Написать автору</h2>
-    <p class="note" style="margin-top:0">Сообщение придёт автору в Telegram. Ответ придёт туда же, если оставишь способ связи.</p>
+    <p class="note" style="margin-top:0">Сообщение придёт автору в Telegram. Ответ появится в кнопке «💬» — можно заглянуть позже, ничего указывать не нужно.</p>
     <label for="wName">Как тебя зовут (не обязательно)</label>
     <input id="wName" type="text" placeholder="имя" maxlength="40">
     <label for="wText">Сообщение</label>
@@ -185,6 +262,21 @@
       <button class="btn" id="closeWrite">Закрыть</button>
     </div>
     <div class="note" id="writeNote"></div>
+    <div class="note">Твой код для ответа: <span class="code" id="myCodeSmall">—</span> — он подставляется в письмо сам.</div>
+  </div>
+</div>
+
+<!-- Ответы автора -->
+<div class="sheet" id="repSheet">
+  <div class="panel">
+    <h2>💬 Ответы автора</h2>
+    <p class="note" style="margin-top:0">Здесь появятся ответы на твои сообщения. Твой код: <span class="code" id="myCode">—</span></p>
+    <div id="repList"></div>
+    <div class="row">
+      <button class="btn" id="repCheck">Проверить снова</button>
+      <button class="btn main" id="closeRep">Закрыть</button>
+    </div>
+    <div class="note" id="repNote">Страница проверяет ответы сама, пока открыта. Ответы хранятся на открытом канале — личное здесь лучше не писать.</div>
   </div>
 </div>
 
@@ -198,22 +290,53 @@
    =========================================================================== */
 
 /* ------------------------------- настройки ------------------------------- */
-const SYSTEM_PROMPT =
-  'Ты — дружелюбный и понятный помощник. Отвечай по-русски, простыми словами, '
-  + 'без лишней воды. Сначала дай прямой ответ, потом коротко поясни. '
-  + 'Если вопрос про учёбу — объясни так, чтобы понял школьник 7–9 класса. '
-  + 'Если чего-то не знаешь или вопрос спорный — скажи честно, не выдумывай. '
-  + 'Не используй Markdown-разметку со звёздочками, пиши обычным текстом.';
+/* Подсказка для ИИ. Задача: отвечать как сильная модель (DeepSeek-уровня) —
+   и на простые вопросы, и на сложные: математика, программирование, разбор
+   ошибок, планы, тексты. Плюс аккуратный вывод: код — отдельным блоком,
+   чтобы сайт дал кнопки «Копировать» и «Скачать». */
+const SYSTEM_PROMPT = [
+  'Ты — умный помощник, как сильная современная модель (уровня DeepSeek/GPT).',
+  'Отвечай по-русски, по делу, без воды и без извинений.',
+  '',
+  'КАК ОТВЕЧАТЬ:',
+  '• На простой вопрос — коротко: 1–3 предложения.',
+  '• На сложный — развёрнуто и по шагам. Не бойся длинных ответов, если вопрос того требует.',
+  '• Задачи по математике и физике решай полностью: формулы, подстановка чисел, ответ с единицами.',
+  '• Программы и скрипты пиши ЦЕЛИКОМ и рабочими, с нужными подключениями. Не пиши «…» вместо кода.',
+  '• Если просят код — дай его в блоке ``` с указанием языка (```python, ```js, ```html).',
+  '• Если нужен файл с определённым именем — пометь блок так: ```file:имя.txt',
+  '• Если ошибка в коде — сначала назови причину, потом дай исправленный код целиком.',
+  '• Если задача непонятна или данных не хватает — задай один короткий уточняющий вопрос.',
+  '• Если не уверен в факте — честно скажи, что нужно проверить. Не выдумывай.',
+  '',
+  'ОФОРМЛЕНИЕ (это Markdown, сайт его красиво покажет):',
+  '**жирный**, *курсив*, `код в строке`, списки через «- », заголовки через «## »,',
+  'ссылки в виде [текст](https://адрес). Блок кода — три обратные кавычки.'
+].join('\n');
 
 const PROVIDERS = {
-  groq:       { name:'Groq', url:'https://api.groq.com/openai/v1/chat/completions', model:'llama-3.3-70b-versatile', style:'openai' },
-  openrouter: { name:'OpenRouter', url:'https://openrouter.ai/api/v1/chat/completions', model:'meta-llama/llama-3.3-70b-instruct:free', style:'openai' },
-  gemini:     { name:'Google Gemini', url:'https://generativelanguage.googleapis.com/v1beta/models/', model:'gemini-2.0-flash', style:'gemini' }
+  /* GitHub Models: ключ github_pat_… со правом Models: read. Внутри есть DeepSeek. */
+  github:     { name:'GitHub Models (DeepSeek)', style:'openai',
+                url:'https://models.github.ai/inference/chat/completions',
+                models:['deepseek/DeepSeek-V3-0324', 'openai/gpt-4o-mini'] },
+  /* OpenRouter: у бесплатных моделей в имени есть :free */
+  openrouter: { name:'OpenRouter (DeepSeek)', style:'openai',
+                url:'https://openrouter.ai/api/v1/chat/completions',
+                models:['deepseek/deepseek-chat-v3-0324:free', 'meta-llama/llama-3.3-70b-instruct:free'] },
+  groq:       { name:'Groq', style:'openai',
+                url:'https://api.groq.com/openai/v1/chat/completions',
+                models:['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'] },
+  gemini:     { name:'Google Gemini', style:'gemini',
+                url:'https://generativelanguage.googleapis.com/v1beta/models/',
+                models:['gemini-2.0-flash'] }
 };
 const FREE_URL = 'https://text.pollinations.ai/openai';
 const FREE_GET = 'https://text.pollinations.ai/';
 const FREE_MODELS = ['openai', 'openai-fast'];
 const SERVICE_TEXT = /credits|top up|not enough|pollinations|api key|contact whoever|quests|queue full|rate limit/i;
+
+/* Картинки: бесплатный сервис без ключа. Отдаёт настоящий JPEG, CORS открыт. */
+const PIC_URL = 'https://image.pollinations.ai/prompt/';
 
 const $ = id => document.getElementById(id);
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -234,12 +357,231 @@ $('themeBtn').onclick = () => {
 try { applyTheme(localStorage.getItem('helper_theme') || 'dark'); } catch (e){ applyTheme('dark'); }
 
 /* --------------------------------- чат ----------------------------------- */
+
+/* ---------------------- разбор ответа ИИ (Markdown) ----------------------
+   ИИ отвечает обычным Markdown. Мы НЕ вставляем его текст как разметку:
+   сначала экранируем все < > & " — иначе чужой текст мог бы стать кодом
+   страницы. Только после этого расставляем свои теги. */
+function esc(s){
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/* Всё, что можно скачать, складываем сюда: кнопки ссылаются на номер. */
+let codeSeq = 0;
+const codeStore = {};
+
+const EXT = {
+  js:'script.js', javascript:'script.js', mjs:'script.mjs', ts:'script.ts',
+  python:'code.py', py:'code.py', html:'index.html', css:'style.css',
+  json:'data.json', csv:'table.csv', txt:'текст.txt', md:'заметка.md',
+  java:'Main.java', c:'main.c', cpp:'main.cpp', csharp:'Program.cs',
+  sql:'query.sql', sh:'script.sh', bash:'script.sh', php:'code.php', go:'main.go'
+};
+function fileNameFor(lang, text){
+  /* ИИ может попросить точное имя файла: ```file:otvet.txt */
+  const m = /^file:\s*(.+)$/i.exec(lang || '');
+  if (m){
+    const raw = m[1].trim().replace(/[\\/:*?"<>|]/g, '_').slice(0, 60);
+    return raw || 'файл.txt';
+  }
+  const key = String(lang || '').toLowerCase().trim();
+  if (EXT[key]) return EXT[key];
+  /* незнакомый язык — угадаем по содержимому */
+  if (/^\s*</.test(text) && /<html|<!doctype/i.test(text)) return 'index.html';
+  if (/^\s*[{[[]/.test(text)) return 'data.json';
+  return 'файл.txt';
+}
+
+function codeBox(text, lang){
+  const id = 'c' + (++codeSeq);
+  const name = fileNameFor(lang, text);
+  codeStore[id] = { text, name };
+  const label = /^file:/i.test(lang || '') ? name : (lang || 'код');
+  return '<div class="codebox">'
+    + '<div class="bar"><span class="lang">' + esc(label) + '</span><span class="grow2"></span>'
+    + '<button data-act="copy" data-id="' + id + '">Копировать</button>'
+    + '<button data-act="save" data-id="' + id + '">Скачать</button>'
+    + '</div><pre><code>' + esc(text) + '</code></pre></div>';
+}
+
+function inlineMd(s){
+  /* на входе уже экранированный текст */
+  s = s
+    .replace(/`([^`]+)`/g, '<code class="inl">$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/(^|[^*\w])\*([^*\n]+)\*/g, '$1<i>$2</i>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  /* Некоторые модели ставят «**» как значок пункта или забывают закрыть пару.
+     Тогда в ответе остаются звёздочки. Убираем только ОДИНОКИЕ «**» — те, что
+     стоят отдельно между пробелами. Степень «2 ** 3» не трогаем. */
+  s = s.replace(/(^|\s)\*{2,}(?=\s|$)/g, '$1');
+  return s;
+}
+
+const BULLET = /^\s*([-*•]|\d+[.)])\s+/;
+
+function renderMd(md){
+  const lines = String(md).replace(/\r\n/g, '\n').split('\n');
+  const out = [];
+  let i = 0;
+  while (i < lines.length){
+    const line = lines[i];
+
+    /* блок кода ``` … ``` */
+    const fence = /^\s*```+\s*(.*?)\s*$/.exec(line);
+    if (fence){
+      const lang = fence[1] || '';
+      i++;
+      const buf = [];
+      while (i < lines.length && !/^\s*```+\s*$/.test(lines[i])){ buf.push(lines[i]); i++; }
+      i++;                                   /* закрывающие кавычки */
+      out.push(codeBox(buf.join('\n'), lang));
+      continue;
+    }
+    if (!line.trim()){ i++; continue; }
+
+    /* заголовки ## — показываем как h3/h4 (h1 и h2 заняты самой страницей) */
+    const head = /^(#{1,4})\s+(.*)$/.exec(line);
+    if (head){
+      const lvl = Math.min(4, head[1].length + 2);
+      out.push('<h' + lvl + '>' + inlineMd(esc(head[2])) + '</h' + lvl + '>');
+      i++; continue;
+    }
+    /* списки */
+    if (BULLET.test(line)){
+      const ordered = /^\s*\d+[.)]\s+/.test(line);
+      const items = [];
+      while (i < lines.length && BULLET.test(lines[i])){
+        items.push('<li>' + inlineMd(esc(lines[i].replace(BULLET, ''))) + '</li>');
+        i++;
+      }
+      const tag = ordered ? 'ol' : 'ul';
+      out.push('<' + tag + '>' + items.join('') + '</' + tag + '>');
+      continue;
+    }
+    /* таблица: строка «| … | … |», под ней разделитель «|---|---|» */
+    if (/^\s*\|.*\|\s*$/.test(line) && i + 1 < lines.length
+        && /^\s*\|[\s:|-]+\|\s*$/.test(lines[i + 1])){
+      const cells = l => l.trim().replace(/^\||\|$/g, '').split('|')
+        .map(c => inlineMd(esc(c.trim())));
+      const head = cells(lines[i]);
+      i += 2;
+      const rows = [];
+      while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])){ rows.push(cells(lines[i])); i++; }
+      out.push('<div class="tblwrap"><table><thead><tr>'
+        + head.map(c => '<th>' + c + '</th>').join('') + '</tr></thead><tbody>'
+        + rows.map(r => '<tr>' + r.map(c => '<td>' + c + '</td>').join('') + '</tr>').join('')
+        + '</tbody></table></div>');
+      continue;
+    }
+    /* обычный абзац */
+    const buf = [];
+    while (i < lines.length && lines[i].trim()
+           && !/^\s*```/.test(lines[i]) && !/^#{1,4}\s/.test(lines[i])
+           && !BULLET.test(lines[i])){
+      buf.push(lines[i]); i++;
+    }
+    out.push('<p>' + buf.map(l => inlineMd(esc(l))).join('<br>') + '</p>');
+  }
+  return out.join('');
+}
+
+/* ---------------------------- сохранение файлов -------------------------- */
+function saveBlob(blob, name){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+function saveText(text, name){
+  saveBlob(new Blob([text], { type:'text/plain;charset=utf-8' }), name);
+}
+
+/* Копирование с запасным путём.
+   ЛОВУШКА: на обычном http (не https) браузер может не дать доступ к
+   navigator.clipboard — тогда нажатие кнопки молча ничего не делает и выглядит
+   как «кнопка не работает». Поэтому: основной путь, старый способ и, если оба
+   не вышли, честная подсказка. Никогда не молчим. */
+async function copyText(text){
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (e){ /* пробуем старый способ */ }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand && document.execCommand('copy');
+    ta.remove();
+    return !!ok;
+  } catch (e){ return false; }
+}
+
+/* Нажимаем кнопки внутри ответов (делегирование — работает и для новых). */
+$('chat').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-act]');
+  if (!b) return;
+  const act = b.dataset.act;
+
+  if (act === 'copy'){
+    const item = codeStore[b.dataset.id];
+    if (!item){ toast('Не нашёл этот код — попробуй ещё раз.'); return; }
+    const was = b.textContent;
+    const ok = await copyText(item.text);
+    b.textContent = ok ? 'Скопировано ✓' : 'Не вышло';
+    setTimeout(() => { b.textContent = was; }, 1800);
+    toast(ok ? 'Код скопирован — можно вставлять.'
+             : 'Браузер не дал скопировать. Выдели текст в блоке и нажми Ctrl+C.');
+    return;
+  }
+  if (act === 'save'){
+    const item = codeStore[b.dataset.id];
+    if (!item) return;
+    saveText(item.text, item.name);
+    toast('Файл «' + item.name + '» сохранён в «Загрузки».');
+    return;
+  }
+  if (act === 'save-answer'){
+    const box = b.closest('.msg');
+    const raw = box && box.dataset.raw;
+    if (raw) saveText(raw, 'ответ-помощника.md');
+    toast('Ответ сохранён файлом «ответ-помощника.md».');
+    return;
+  }
+  if (act === 'save-pic'){
+    const blob = picBlobs[b.dataset.pic];
+    if (!blob){ toast('Картинка ещё не готова — подожди немного.'); return; }
+    saveBlob(blob, 'картинка-' + b.dataset.pic + '.jpg');
+    toast('Картинка сохранена в «Загрузки».');
+  }
+});
+
+/* ------------------------------- сообщение ------------------------------- */
 function bubble(role, text, src){
   const el = document.createElement('div');
   el.className = 'msg ' + (role === 'user' ? 'me' : 'ai');
+  el.dataset.raw = text;
   el.innerHTML = '<div class="av">' + (role === 'user' ? 'Я' : 'AI') + '</div><div class="bub"></div>';
   const b = el.querySelector('.bub');
-  b.textContent = text;
+
+  if (role === 'user'){
+    b.textContent = text;                    /* своё сообщение показываем как есть */
+  } else {
+    b.classList.add('rich');
+    b.innerHTML = renderMd(text);            /* текст ИИ уже экранирован внутри renderMd */
+    const acts = document.createElement('div');
+    acts.className = 'acts';
+    acts.innerHTML = '<button data-act="save-answer">Скачать ответ файлом</button>';
+    b.appendChild(acts);
+  }
   if (src){
     const s = document.createElement('span');
     s.className = 'src'; s.textContent = src; b.appendChild(s);
@@ -247,6 +589,95 @@ function bubble(role, text, src){
   $('chat').appendChild(el);
   $('chat').scrollTop = $('chat').scrollHeight;
 }
+
+/* ------------------------------ картинка ---------------------------------
+   ЛОВУШКА (проверено 25.09.2026): сервис картинок пускает примерно ОДИН запрос
+   за раз. Если спросить сразу второй — отвечает ошибкой 500, и картинка не
+   появляется вовсе. Поэтому: несколько попыток с паузами (всего до ~70 секунд)
+   и честная строка состояния, чтобы ожидание не выглядело поломкой.
+   Картинку забираем через fetch (CORS открыт) — тогда её легко сохранить файлом. */
+const picBlobs = {};
+let picSeq = 0;
+
+function picBubble(prompt){
+  const id = 'p' + (++picSeq);
+  const el = document.createElement('div');
+  el.className = 'msg ai'; el.id = 'pic-' + id;
+  el.innerHTML = '<div class="av">AI</div><div class="bub rich">'
+    + '<p>Рисую: <b>' + esc(prompt) + '</b></p>'
+    + '<div class="picbox" id="pb-' + id + '">'
+    + '<div class="hint" id="ph-' + id + '">Отправляю запрос сервису картинок…</div>'
+    + '</div></div>';
+  $('chat').appendChild(el);
+  $('chat').scrollTop = $('chat').scrollHeight;
+  return id;
+}
+function picStatus(id, text){
+  const h = $('ph-' + id);
+  if (h) h.textContent = text;
+}
+function picDone(id, blob, prompt){
+  picBlobs[id] = blob;
+  const url = URL.createObjectURL(blob);
+  const box = $('pb-' + id);
+  if (!box) return;
+  box.innerHTML = '<img alt="' + esc(prompt) + '" src="' + url + '">'
+    + '<div class="bar"><button data-act="save-pic" data-pic="' + id + '">Скачать картинку</button>'
+    + '<span class="hint">Картинка сгенерирована бесплатным ИИ.</span></div>';
+  $('chat').scrollTop = $('chat').scrollHeight;
+}
+function picFail(id){
+  const box = $('pb-' + id);
+  if (!box) return;
+  box.innerHTML = '<div class="hint">Сервис картинок сейчас занят (он пускает примерно '
+    + 'один запрос за раз). Подожди полминуты и нажми «🖼» ещё раз — обычно получается.</div>';
+}
+
+async function makePicture(prompt){
+  bubble('user', '🖼 ' + prompt);
+  history.push({ role:'user', text: 'Нарисуй: ' + prompt });
+  const id = picBubble(prompt);
+
+  const PAUSES = [0, 12000, 20000, 30000];      /* всего до ~1 минуты */
+  for (let i = 0; i < PAUSES.length; i++){
+    if (PAUSES[i]) await wait(PAUSES[i]);
+    picStatus(id, i === 0
+      ? 'Рисую картинку — обычно это 5–30 секунд…'
+      : 'Сервис занят, жду и пробую снова… (попытка ' + (i + 1) + ')');
+    try {
+      const url = PIC_URL + encodeURIComponent(prompt)
+        + '?width=768&height=768&nologo=true&seed=' + Math.floor(Math.random() * 1000000);
+      const blob = await withTimeout(async (signal) => {
+        const r = await fetch(url, { signal });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const b = await r.blob();
+        if (!b || b.size < 3000) throw new Error('пустая картинка');
+        return b;
+      }, 45000);
+      picDone(id, blob, prompt);
+      history.push({ role:'assistant', text: 'Нарисовал картинку по запросу: ' + prompt });
+      return;
+    } catch (e){ /* пробуем ещё раз после паузы */ }
+  }
+  picFail(id);
+  toast('Не получилось нарисовать — сервис занят. Попробуй ещё раз через полминуты.');
+}
+
+/* Понять, что человек просит именно картинку. */
+function asksForPicture(text){
+  const t = text.toLowerCase();
+  if (/(нарисуй|нарисовать|сгенерируй|сгенерировать|создай|сделай|покажи)\s+(мне\s+)?(картинк|изображен|фото|рисунок|арт|иллюстрац|постер|обои|аватарк|логотип)/i.test(t)) return true;
+  if (/^(картинка|изображение|рисунок|арт|фото)[:\s]/i.test(t.trim())) return true;
+  if (/\b(draw|generate|create|make)\s+(me\s+)?(an?\s+)?(image|picture|photo|art|logo|avatar)/i.test(t)) return true;
+  return false;
+}
+function picturePrompt(text){
+  return text
+    .replace(/^\s*(нарисуй|нарисовать|сгенерируй|сгенерировать|создай|сделай|покажи|draw|generate|create|make)\s+(мне\s+)?/i, '')
+    .replace(/^\s*(картинку|картинка|изображение|рисунок|арт|фото|image|picture|photo)\s*(с|про|of|with)?[:\s]*/i, '')
+    .trim() || text.trim();
+}
+
 function typingOn(){
   const el = document.createElement('div');
   el.className = 'msg ai'; el.id = 'typing';
@@ -272,12 +703,14 @@ function showIntro(){
   const el = document.createElement('div');
   el.className = 'intro'; el.id = 'intro';
   el.innerHTML = '<h1>Спроси что угодно<br><span>я помогу</span></h1>'
-    + '<p>Учёба, объяснения, идеи, тексты, планы — пиши своими словами. Отвечаю сразу.</p>'
+    + '<p>Учёба, сложные задачи, код, тексты, планы — пиши своими словами. Могу и нарисовать картинку.</p>'
     + '<div class="cards">'
     + ['Объясни простыми словами, почему идёт дождь',
+       'Напиши программу на Python: угадай число',
+       'Нарисуй космического кота в шлеме',
+       'Реши: поезд шёл 2 часа со скоростью 60 км/ч. Какой путь?',
        'Помоги решить: у Пети было 3 яблока, он отдал 1 — сколько осталось?',
-       'Придумай 5 идей для школьного проекта',
-       'Как запомнить таблицу умножения быстрее?'].map(t =>
+       'Придумай 5 идей для школьного проекта'].map(t =>
         '<button class="card">' + t + '</button>').join('')
     + '</div>';
   $('chat').appendChild(el);
@@ -352,33 +785,53 @@ async function askFreeAI(text, onProgress){
 }
 
 async function askKeyAI(text){
-  const p = PROVIDERS[cfg.provider];
-  const model = cfg.model || p.model;
+  const p = PROVIDERS[cfg.provider] || PROVIDERS.github;
+  /* Сначала модель, которую выбрал человек, потом запасные из списка:
+     если DeepSeek в этом сервисе недоступен, ответ всё равно придёт. */
+  const list = [];
+  if (cfg.model) list.push(cfg.model);
+  for (const m of (p.models || [])) if (!list.includes(m)) list.push(m);
+
   const msgs = chatMessages(text);
-  return withTimeout(async (signal) => {
-    if (p.style === 'gemini'){
-      const url = p.url + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(cfg.key);
-      const r = await fetch(url, {
-        method:'POST', headers:{ 'Content-Type':'application/json' }, signal,
-        body: JSON.stringify({ systemInstruction:{ parts:[{ text:SYSTEM_PROMPT }] },
-          contents: msgs.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts:[{ text:m.content }] })) })
-      });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const j = await r.json();
-      const out = (j.candidates?.[0]?.content?.parts || []).map(x => x.text || '').join('').trim();
-      if (!out) throw new Error('пустой ответ');
-      return out;
-    }
-    const r = await fetch(p.url, {
-      method:'POST', headers:{ 'Content-Type':'application/json', Authorization:'Bearer ' + cfg.key }, signal,
-      body: JSON.stringify({ model, messages:[{ role:'system', content:SYSTEM_PROMPT }, ...msgs], temperature:0.7 })
-    });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const j = await r.json();
-    const out = (j.choices?.[0]?.message?.content || '').trim();
-    if (!out) throw new Error('пустой ответ');
-    return out;
-  }, 30000);
+  let lastErr = new Error('не получилось');
+  for (const model of list){
+    try {
+      return await withTimeout(async (signal) => {
+        let out = '';
+        if (p.style === 'gemini'){
+          const url = p.url + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(cfg.key);
+          const r = await fetch(url, {
+            method:'POST', headers:{ 'Content-Type':'application/json' }, signal,
+            body: JSON.stringify({
+              systemInstruction:{ parts:[{ text:SYSTEM_PROMPT }] },
+              contents: msgs.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts:[{ text:m.content }] }))
+            })
+          });
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          const j = await r.json();
+          out = (j.candidates?.[0]?.content?.parts || []).map(x => x.text || '').join('').trim();
+        } else {
+          const r = await fetch(p.url, {
+            method:'POST',
+            headers:{ 'Content-Type':'application/json', Authorization:'Bearer ' + cfg.key },
+            signal,
+            body: JSON.stringify({
+              model,
+              messages:[{ role:'system', content:SYSTEM_PROMPT }, ...msgs],
+              temperature: 0.7,
+              max_tokens: 4000          /* чтобы хватало на длинный код и разбор задачи */
+            })
+          });
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          const j = await r.json();
+          out = (j.choices?.[0]?.message?.content || '').trim();
+        }
+        if (!out) throw new Error('пустой ответ');
+        return out;
+      }, 90000);                        /* сложный вопрос и большой код требуют времени */
+    } catch (e){ lastErr = e; }
+  }
+  throw lastErr;
 }
 
 /* --------------------------------- ответ --------------------------------- */
@@ -386,6 +839,15 @@ async function send(text){
   text = (text || '').trim();
   if (busy){ toast('Уже отвечаю — подожди чуть-чуть, ответ скоро появится.'); return; }
   if (!text){ toast('Напиши вопрос — например «объясни, что такое фотосинтез».'); return; }
+
+  /* Просьба нарисовать картинку — это не вопрос к ИИ, а генерация. */
+  if (asksForPicture(text)){
+    hideToast(); hideIntro();
+    $('ask').value = ''; autoGrow();
+    makePicture(picturePrompt(text));
+    return;
+  }
+
   busy = true; $('send').classList.add('busy'); hideToast(); hideIntro();
 
   bubble('user', text);
@@ -408,10 +870,12 @@ async function send(text){
     }
     if (reply === null){
       usedFallback = true;
-      reply = 'Не получилось получить ответ: бесплатный сервис перегружен и не ответил за 45 секунд.\n\n'
-        + 'Что можно сделать:\n'
-        + '• подожди минуту и спроси ещё раз — обычно со второй попытки получается;\n'
-        + '• если так часто — нажми ⚙️ и вставь свой ключ, он работает надёжнее.';
+      reply = '## Не получилось получить ответ\n\n'
+        + 'Бесплатный сервис перегружен и не ответил за 45 секунд.\n\n'
+        + '**Что можно сделать:**\n'
+        + '- подожди минуту и спроси ещё раз — обычно со второй попытки получается;\n'
+        + '- если так часто — нажми ⚙️ и вставь свой ключ (GitHub Models или OpenRouter): '
+        + 'там есть DeepSeek, и он отвечает надёжнее и на сложные вопросы.';
     }
   }
   typingOff();
@@ -422,14 +886,21 @@ async function send(text){
 }
 
 /* ------------------------------ настройки ИИ ----------------------------- */
+function cfgChip(){
+  $('modeTxt').textContent = (cfg.mode === 'key' && cfg.key)
+    ? 'ИИ: ' + (PROVIDERS[cfg.provider] || PROVIDERS.github).name
+    : 'Готов отвечать';
+}
 function loadCfg(){
   try {
     const raw = localStorage.getItem('helper_cfg');
     if (raw) cfg = Object.assign(cfg, JSON.parse(raw));
   } catch (e){}
+  if (!PROVIDERS[cfg.provider]) cfg.provider = 'github';
   $('mode').value = cfg.mode; $('prov').value = cfg.provider;
-  $('key').value = cfg.key; $('mdl').value = cfg.model;
+  $('key').value = cfg.key || ''; $('mdl').value = cfg.model || '';
   $('keyFields').style.display = cfg.mode === 'key' ? '' : 'none';
+  cfgChip();
 }
 $('mode').onchange = () => { $('keyFields').style.display = $('mode').value === 'key' ? '' : 'none'; };
 $('cfgBtn').onclick = () => $('cfgSheet').classList.add('on');
@@ -438,14 +909,59 @@ $('saveCfg').onclick = () => {
   cfg = { mode: $('mode').value, provider: $('prov').value, key: $('key').value.trim(), model: $('mdl').value.trim() };
   try { localStorage.setItem('helper_cfg', JSON.stringify(cfg)); } catch (e){}
   $('cfgSheet').classList.remove('on');
-  $('modeTxt').textContent = cfg.mode === 'key' && cfg.key
-    ? 'ИИ: ' + PROVIDERS[cfg.provider].name
-    : 'Готов отвечать';
+  cfgChip();
+  toast(cfg.mode === 'key' && cfg.key
+    ? 'Готово. Отвечает ' + (PROVIDERS[cfg.provider] || PROVIDERS.github).name + '.'
+    : 'Готово. Отвечаю бесплатным ИИ.');
+};
+/* «Проверить связь» — честно спрашиваем у сервиса короткий вопрос и показываем,
+   что именно ответил. Иначе непонятно, работает ключ или нет. */
+$('testCfg').onclick = async () => {
+  const note = $('cfgNote');
+  const mode = $('mode').value;
+  const key = $('key').value.trim();
+  const prov = $('prov').value;
+  if (mode === 'key' && !key){ note.textContent = 'Сначала вставь ключ.'; return; }
+  note.textContent = 'Проверяю связь…';
+  const saved = cfg;
+  try {
+    cfg = { mode, provider: prov, key, model: $('mdl').value.trim() };
+    const t0 = Date.now();
+    const a = (mode === 'key') ? await askKeyAI('Ответь одним словом: работает?') : await askFreeAI('Ответь одним словом: работает?');
+    note.innerHTML = '<span class="ok">Связь есть (' + ((Date.now() - t0) / 1000).toFixed(1)
+      + ' с). Сервис ответил: «' + esc(a.replace(/\s+/g, ' ').slice(0, 90)) + '»</span>';
+  } catch (e){
+    note.innerHTML = '<b>Связь не прошла.</b> Причина: ' + esc(String(e && e.message || e))
+      + '. Проверь ключ (не скопировался ли лишний пробел) и интернет.';
+  } finally { cfg = saved; cfgChip(); }
 };
 
-/* ------------------------- сообщение автору (ntfy) ------------------------ */
+/* ------------------------- сообщение автору (ntfy) ------------------------
+   Токена в странице нет: письмо уходит в открытый канал, оттуда его забирает
+   маленькая программа на компьютере автора и пересылает в Telegram. Ответ
+   автор пишет прямо в Telegram, а он возвращается сюда — в кнопку «💬». */
 const RELAY_TOPIC = 'gffr-pismo-e1697d6b0677';
+const REPLY_TOPIC = 'gffr-otvet-e1697d6b0677';
 const RELAY_URL = 'https://ntfy.sh/' + RELAY_TOPIC;
+const REPLY_URL = 'https://ntfy.sh/' + REPLY_TOPIC;
+
+/* Код посетителя. По нему автор понимает, кому отвечает, а страница — какой
+   ответ ей показывать. Ничего личного в нём нет, живёт в этом браузере. */
+const PID_KEY = 'pomoshnik_pid';
+const PID = (function(){
+  let v = '';
+  try { v = localStorage.getItem(PID_KEY) || ''; } catch (e){}
+  if (!/^[a-z0-9]{8}$/.test(v)){
+    v = '';
+    const abc = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    for (let i = 0; i < 8; i++) v += abc[Math.floor(Math.random() * abc.length)];
+    try { localStorage.setItem(PID_KEY, v); } catch (e){}
+  }
+  return v;
+})();
+const CODE = PID.toUpperCase();
+$('myCode').textContent = CODE;
+$('myCodeSmall').textContent = CODE;
 
 $('writeBtn').onclick = () => { $('writeNote').textContent = ''; $('writeSheet').classList.add('on'); };
 $('closeWrite').onclick = () => $('writeSheet').classList.remove('on');
@@ -458,19 +974,21 @@ $('sendLetter').onclick = async () => {
   btn.textContent = 'Отправляю…'; btn.disabled = false;
   try {
     /* ВАЖНО: заголовки запроса должны быть ASCII. Русский текст в заголовке
-       браузер запрещает и запрос вообще не уходит — поэтому всё в теле письма. */
+       браузер запрещает и запрос вообще не уходит — поэтому всё в теле письма.
+       Строка «Код: …» нужна, чтобы автор мог ответить именно этому человеку. */
     const r = await fetch(RELAY_URL, {
       method:'POST',
       headers:{ 'Content-Type':'text/plain; charset=utf-8' },
       body: 'Новое сообщение с сайта «Помощник»\n'
+        + 'Код: ' + CODE + '\n'
         + 'От: ' + (name || 'не указано') + '\n'
         + '---\n'
         + text
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    $('writeNote').innerHTML = '<span class="ok">Отправлено! Автор увидит сообщение.</span>';
+    $('writeNote').innerHTML = '<span class="ok">Отправлено! Ответ появится в кнопке «💬» — загляни туда позже.</span>';
     $('wText').value = ''; $('wName').value = '';
-    setTimeout(() => $('writeSheet').classList.remove('on'), 1200);
+    setTimeout(() => $('writeSheet').classList.remove('on'), 1600);
   } catch (e){
     if (window.console) console.warn('письмо не ушло:', e && e.message);
     $('writeNote').textContent = 'Не получилось отправить. Проверь интернет и попробуй ещё раз.';
@@ -479,8 +997,101 @@ $('sendLetter').onclick = async () => {
   }
 };
 
+/* ---------------------------- ответы автора -------------------------------
+   Читаем тот же открытый канал, но ответы. Показываем только те, у которых
+   наш код. Чужой текст выводим через textContent — чтобы он не стал разметкой. */
+const SEEN_KEY = 'pomoshnik_replies';
+let seenReplies = (function(){ try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '[]'); } catch (e){ return []; } })();
+const replies = [];                       /* [{id, time, text, mine}] */
+
+function saveSeen(){ try { localStorage.setItem(SEEN_KEY, JSON.stringify(seenReplies.slice(-200))); } catch (e){} }
+
+function renderReplies(){
+  const box = $('repList');
+  if (!replies.length){
+    box.innerHTML = '<div class="note">Пока ответов нет. Напиши автору — и загляни сюда позже.</div>';
+    return;
+  }
+  box.innerHTML = '';
+  for (const r of replies.slice().reverse()){
+    const card = document.createElement('div');
+    card.className = 'rep';
+    const when = document.createElement('div');
+    when.className = 'when';
+    when.textContent = new Date((r.time || 0) * 1000).toLocaleString('ru-RU');
+    const body = document.createElement('div');
+    body.className = 'body';
+    body.textContent = r.text;
+    card.appendChild(when); card.appendChild(body);
+    if (r.mine){
+      const mine = document.createElement('div');
+      mine.className = 'mine';
+      mine.textContent = 'Твоё сообщение: ' + r.mine;
+      card.appendChild(mine);
+    }
+    box.appendChild(card);
+  }
+}
+
+function badge(){
+  const n = replies.filter(r => !seenReplies.includes(r.id)).length;
+  const b = $('repBadge');
+  b.textContent = n > 9 ? '9+' : String(n);
+  b.classList.toggle('on', n > 0);
+}
+
+async function loadReplies(){
+  try {
+    /* ЛОВУШКА (проверено 25.09.2026): если дописать в адрес лишний параметр
+       (например &t=… «чтобы не кэшировалось»), ntfy отвечает ПУСТЫМ телом —
+       0 байт, код 200. Со стороны это выглядит как «ответы не приходят».
+       Поэтому адрес строго такой: /json?poll=1&since=all, а от кэша
+       спасает cache:'no-store'. Больше ничего не дописывать. */
+    const r = await fetch(REPLY_URL + '/json?poll=1&since=all', { cache:'no-store' });
+    if (!r.ok) return;
+    const body = await r.text();
+    let changed = false;
+    for (const line of body.split('\n')){
+      const s = line.trim(); if (!s) continue;
+      let j; try { j = JSON.parse(s); } catch (e){ continue; }
+      if (j.event !== 'message' || !j.message) continue;
+      let p; try { p = JSON.parse(j.message); } catch (e){ continue; }
+      if (!p || String(p.code || '').toUpperCase() !== CODE) continue;
+      if (replies.some(x => x.id === j.id)) continue;
+      replies.push({
+        id: j.id,
+        time: j.time || Math.floor(Date.now() / 1000),
+        text: String(p.text || ''),
+        mine: String(p.mine || '')
+      });
+      changed = true;
+    }
+    if (changed){
+      replies.sort((a, b) => (a.time || 0) - (b.time || 0));
+      renderReplies(); badge();
+    }
+  } catch (e){ /* нет сети — попробуем в следующий раз */ }
+}
+
+$('repBtn').onclick = () => {
+  $('repSheet').classList.add('on');
+  for (const r of replies) if (!seenReplies.includes(r.id)) seenReplies.push(r.id);
+  saveSeen(); badge(); loadReplies();
+};
+$('closeRep').onclick = () => $('repSheet').classList.remove('on');
+$('repCheck').onclick = () => {
+  $('repNote').textContent = 'Проверяю…';
+  loadReplies().then(() => { $('repNote').textContent = 'Проверено. Обновляется само, пока страница открыта.'; });
+};
+
 /* -------------------------------- запуск --------------------------------- */
 $('send').onclick = () => send($('ask').value);
+$('picBtn').onclick = () => {
+  const t = $('ask').value.trim();
+  if (!t){ toast('Напиши, что нарисовать — например «кот в космосе».'); $('ask').focus(); return; }
+  hideIntro(); $('ask').value = ''; autoGrow();
+  makePicture(picturePrompt(t));
+};
 $('ask').addEventListener('input', autoGrow);
 $('ask').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); send($('ask').value); }
@@ -488,6 +1099,83 @@ $('ask').addEventListener('keydown', e => {
 loadCfg();
 showIntro();
 $('ask').focus();
+
+/* ответы проверяем сразу при открытии и дальше каждые 20 секунд */
+loadReplies();
+setInterval(loadReplies, 20000);
+</script>
+
+<!-- ============================================================
+     СЧЁТЧИК ОНЛАЙНА
+     ------------------------------------------------------------
+     Отмечает посещение на бесплатном счётчике abacus и показывает,
+     сколько людей сейчас на сайте. Стоит ОТДЕЛЬНЫМ блоком в самом
+     конце страницы и целиком в try/catch: если счётчика нет или
+     сети нет — сайт работает как обычно.
+     Общая картина по всем сайтам проекта — на панели fizika-online.
+     ============================================================ -->
+<script>
+(function(){
+  var SITE_ID = 'pomoshnik';                       /* так сайт называется в счётчике */
+  var NS  = 'fizika-izvestnye-fiziki-81';
+  var API = 'https://abacus.jasoncameron.dev';
+
+  try {
+    if (typeof fetch !== 'function') return;
+
+    /* московское время, чтобы «сегодня» и «этот час» у всех совпадали */
+    var stamp = function(offsetMin){
+      var t = new Date(Date.now() + 3*3600*1000 + (offsetMin||0)*60000);
+      var p = function(n){ return String(n).padStart(2,'0'); };
+      var day  = String(t.getUTCFullYear()) + p(t.getUTCMonth()+1) + p(t.getUTCDate());
+      var hour = day + p(t.getUTCHours());
+      return { day: day, hour: hour, minute: hour + p(t.getUTCMinutes()) };
+    };
+    var hit = function(key){
+      try { fetch(API + '/hit/' + NS + '/' + key, { cache:'no-store' }).catch(function(){}); }
+      catch (e) { /* нет сети — не мешаем сайту */ }
+    };
+    var read = function(key){
+      return fetch(API + '/get/' + NS + '/' + key + '?t=' + Date.now(), { cache:'no-store' })
+        .then(function(r){
+          if (r.status === 404) return 0;          /* ключа нет — значит никого */
+          return r.ok ? r.json() : null;           /* сбой счётчика — честно покажем «—» */
+        })
+        .then(function(j){
+          if (j === 0) return 0;
+          return (j && typeof j.value === 'number') ? j.value : null;
+        })
+        .catch(function(){ return null; });
+    };
+    var beat = function(){ hit('m-' + SITE_ID + '-' + stamp(0).minute); };
+
+    var s = stamp(0);
+    hit('v-' + SITE_ID);                     /* всего открытий */
+    hit('d-' + SITE_ID + '-' + s.day);       /* открытий за сегодня */
+    hit('h-' + SITE_ID + '-' + s.hour);      /* открытий за этот час */
+    beat();                                  /* отметка «я тут» */
+
+    /* пока вкладка открыта — каждые 30 секунд подтверждаем, что мы онлайн */
+    setInterval(function(){ if (!document.hidden) beat(); }, 30000);
+    document.addEventListener('visibilitychange', function(){ if (!document.hidden) beat(); });
+
+    var out = document.querySelector('#onl b');
+    var show = function(){
+      var now = stamp(0), prev = stamp(-1);
+      Promise.all([
+        read('m-' + SITE_ID + '-' + now.minute),
+        read('m-' + SITE_ID + '-' + prev.minute)
+      ]).then(function(v){
+        if (!out) return;
+        if (v[0] === null && v[1] === null){ out.textContent = '—'; return; }
+        /* берём максимум из двух последних минут, чтобы число не прыгало в ноль */
+        out.textContent = String(Math.max(v[0] || 0, v[1] || 0));
+      }).catch(function(){});
+    };
+    show();
+    setInterval(show, 20000);
+  } catch (e) { /* счётчик ни при каких условиях не должен ломать сайт */ }
+})();
 </script>
 </body>
 </html>
