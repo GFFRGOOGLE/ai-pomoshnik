@@ -219,15 +219,15 @@
     <div id="keyFields" style="display:none">
       <label for="prov">Сервис</label>
       <select id="prov">
-        <option value="github">GitHub Models — там есть DeepSeek (github_pat_…)</option>
-        <option value="openrouter">OpenRouter — бесплатный DeepSeek (sk-or-…)</option>
-        <option value="groq">Groq — очень быстрый (gsk_…)</option>
-        <option value="gemini">Google Gemini (AIza…)</option>
+        <option value="openrouter">OpenRouter — бесплатные модели (sk-or-…)</option>
+        <option value="groq">Groq — очень быстрый, бесплатно (gsk_…)</option>
+        <option value="gemini">Google Gemini — бесплатно (AIza…)</option>
+        <option value="deepseek">DeepSeek напрямую — платно, но дёшево (sk-…)</option>
       </select>
       <label for="key">Ключ</label>
       <input id="key" type="password" placeholder="вставь ключ" autocomplete="off">
       <label for="mdl">Модель (можно не заполнять — возьму лучшую по умолчанию)</label>
-      <input id="mdl" type="text" placeholder="например deepseek/DeepSeek-V3-0324">
+      <input id="mdl" type="text" placeholder="например qwen/qwen3.8-27b:free">
     </div>
     <div class="row">
       <button class="btn main" id="saveCfg">Сохранить</button>
@@ -235,6 +235,15 @@
       <button class="btn" id="closeCfg">Закрыть</button>
     </div>
     <div class="note" id="cfgNote">Ключ хранится только в этом браузере и никуда не отправляется, кроме самого сервиса.</div>
+    <div class="note" style="border-top:1px dashed var(--line); padding-top:10px">
+      <b>Где взять ключ (карта не нужна):</b><br>
+      • <b>OpenRouter</b> — openrouter.ai/keys. Бесплатные модели с пометкой «:free».<br>
+      • <b>Groq</b> — console.groq.com/keys. Быстрый, бесплатный тариф.<br>
+      • <b>Google Gemini</b> — aistudio.google.com/apikey.<br>
+      • <b>DeepSeek</b> — platform.deepseek.com/api_keys. Это платно, но очень дёшево.<br>
+      <i>Проверено 25.09.2026: GitHub Models закрыт, старые модели Groq и Gemini отключены —
+      поэтому список именно такой.</i>
+    </div>
     <div class="note" style="border-top:1px dashed var(--line); padding-top:12px">
       <b>Что умею:</b> отвечать на любые вопросы (в том числе сложные), писать код отдельным
       файлом, рисовать картинки, отдавать ответ файлом.<br>
@@ -315,20 +324,28 @@ const SYSTEM_PROMPT = [
 ].join('\n');
 
 const PROVIDERS = {
-  /* GitHub Models: ключ github_pat_… со правом Models: read. Внутри есть DeepSeek. */
-  github:     { name:'GitHub Models (DeepSeek)', style:'openai',
-                url:'https://models.github.ai/inference/chat/completions',
-                models:['deepseek/DeepSeek-V3-0324', 'openai/gpt-4o-mini'] },
-  /* OpenRouter: у бесплатных моделей в имени есть :free */
-  openrouter: { name:'OpenRouter (DeepSeek)', style:'openai',
+  /* Список сверен 25.09.2026 по открытому каталогу openrouter.ai/api/v1/models.
+     ВАЖНО (иначе снова будут «мёртвые» варианты):
+       • GitHub Models — ЗАКРЫТ 30.07.2026, убран совсем;
+       • Groq llama-3.3-70b-versatile — ушёл в Enterprise, обычному человеку недоступен;
+       • Gemini gemini-2.0-flash — ОТКЛЮЧЁН производителем.
+     У бесплатных моделей OpenRouter в имени есть «:free» — они действительно 0 ₽. */
+  openrouter: { name:'OpenRouter (бесплатные модели)', style:'openai',
                 url:'https://openrouter.ai/api/v1/chat/completions',
-                models:['deepseek/deepseek-chat-v3-0324:free', 'meta-llama/llama-3.3-70b-instruct:free'] },
-  groq:       { name:'Groq', style:'openai',
+                models:['nvidia/nemotron-3-ultra-550b-a55b:free',
+                        'qwen/qwen3.8-27b:free',
+                        'z-ai/glm-5.2:free',
+                        'google/gemma-4-31b-it:free'] },
+  groq:       { name:'Groq (очень быстрый)', style:'openai',
                 url:'https://api.groq.com/openai/v1/chat/completions',
-                models:['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'] },
+                models:['openai/gpt-oss-120b', 'qwen/qwen3.8-27b', 'openai/gpt-oss-20b'] },
   gemini:     { name:'Google Gemini', style:'gemini',
                 url:'https://generativelanguage.googleapis.com/v1beta/models/',
-                models:['gemini-2.0-flash'] }
+                models:['gemini-3.8-flash', 'gemini-3.5-flash-lite'] },
+  /* DeepSeek напрямую: платный, но очень дешёвый — для тех, кому нужен именно он. */
+  deepseek:   { name:'DeepSeek (платно, но дёшево)', style:'openai',
+                url:'https://api.deepseek.com/chat/completions',
+                models:['deepseek-flash', 'deepseek-v4-pro'] }
 };
 const FREE_URL = 'https://text.pollinations.ai/openai';
 const FREE_GET = 'https://text.pollinations.ai/';
@@ -341,7 +358,7 @@ const PIC_URL = 'https://image.pollinations.ai/prompt/';
 const $ = id => document.getElementById(id);
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
-let cfg = { mode:'free', provider:'groq', key:'', model:'' };
+let cfg = { mode:'free', provider:'openrouter', key:'', model:'' };
 let history = [];        /* [{role, text}] — для контекста разговора */
 let busy = false;
 
@@ -789,7 +806,7 @@ async function askFreeAI(text, onProgress){
 }
 
 async function askKeyAI(text){
-  const p = PROVIDERS[cfg.provider] || PROVIDERS.github;
+  const p = PROVIDERS[cfg.provider] || PROVIDERS.openrouter;
   /* Сначала модель, которую выбрал человек, потом запасные из списка:
      если DeepSeek в этом сервисе недоступен, ответ всё равно придёт. */
   const list = [];
@@ -878,8 +895,8 @@ async function send(text){
         + 'Бесплатный сервис перегружен и не ответил за 45 секунд.\n\n'
         + '**Что можно сделать:**\n'
         + '- подожди минуту и спроси ещё раз — обычно со второй попытки получается;\n'
-        + '- если так часто — нажми ⚙️ и вставь свой ключ (GitHub Models или OpenRouter): '
-        + 'там есть DeepSeek, и он отвечает надёжнее и на сложные вопросы.';
+        + '- если так часто — нажми ⚙️ и вставь свой ключ: у OpenRouter и Groq есть '
+        + 'по-настоящему бесплатные модели, и они отвечают на сложные вопросы в разы лучше.';
     }
   }
   typingOff();
@@ -892,7 +909,7 @@ async function send(text){
 /* ------------------------------ настройки ИИ ----------------------------- */
 function cfgChip(){
   $('modeTxt').textContent = (cfg.mode === 'key' && cfg.key)
-    ? 'ИИ: ' + (PROVIDERS[cfg.provider] || PROVIDERS.github).name
+    ? 'ИИ: ' + (PROVIDERS[cfg.provider] || PROVIDERS.openrouter).name
     : 'Готов отвечать';
 }
 function loadCfg(){
@@ -900,7 +917,13 @@ function loadCfg(){
     const raw = localStorage.getItem('helper_cfg');
     if (raw) cfg = Object.assign(cfg, JSON.parse(raw));
   } catch (e){}
-  if (!PROVIDERS[cfg.provider]) cfg.provider = 'github';
+  /* В браузере мог остаться сервис, которого больше нет (например GitHub Models,
+     закрытый 30.07.2026) или его модель. Тогда страница молча ломалась бы при
+     отправке вопроса — подменяем на живой и забываем старое имя модели. */
+  if (!PROVIDERS[cfg.provider]){
+    cfg.provider = 'openrouter'; cfg.model = '';
+    try { localStorage.setItem('helper_cfg', JSON.stringify(cfg)); } catch (e){}
+  }
   $('mode').value = cfg.mode; $('prov').value = cfg.provider;
   $('key').value = cfg.key || ''; $('mdl').value = cfg.model || '';
   $('keyFields').style.display = cfg.mode === 'key' ? '' : 'none';
@@ -915,7 +938,7 @@ $('saveCfg').onclick = () => {
   $('cfgSheet').classList.remove('on');
   cfgChip();
   toast(cfg.mode === 'key' && cfg.key
-    ? 'Готово. Отвечает ' + (PROVIDERS[cfg.provider] || PROVIDERS.github).name + '.'
+    ? 'Готово. Отвечает ' + (PROVIDERS[cfg.provider] || PROVIDERS.openrouter).name + '.'
     : 'Готово. Отвечаю бесплатным ИИ.');
 };
 /* «Проверить связь» — честно спрашиваем у сервиса короткий вопрос и показываем,
